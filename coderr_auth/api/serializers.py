@@ -94,7 +94,7 @@ class ProfileSerializer(serializers.ModelSerializer):
         """
         allowed_fields = {
             'email', 'first_name', 'last_name',
-            'file', 'location', 'description', 'working_hours', 'tel'
+            'file', 'location', 'description', 'working_hours', 'tel', 'user'
         }
         extra_fields = [key for key in self.initial_data.keys() if key not in allowed_fields]
 

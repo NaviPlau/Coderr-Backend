@@ -65,7 +65,7 @@ class ProfileDetailsAPIView(APIView):
     def patch(self, request, pk, format=None):
         """
         Partially updates a profile with the given primary key, allowing
-        updates only to specific fields, and rejecting any other fields.
+        updates only to specific fields, and ensuring the user profile is included in the response.
         """
         profile = get_object_or_404(Profile, pk=pk)
 
@@ -100,9 +100,10 @@ class ProfileDetailsAPIView(APIView):
         if serializer.is_valid():
             serializer.save()
 
-            # Return only the fields that were updated
-            updated_fields = {key: serializer.data[key] for key in data.keys()}
-            return Response(updated_fields, status=status.HTTP_200_OK)
+            # Always include the user details in the response
+            response_data = {key: serializer.data[key] for key in data.keys()}
+            response_data['user'] = pk
+            return Response(response_data, status=status.HTTP_200_OK)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
