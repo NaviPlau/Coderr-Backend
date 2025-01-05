@@ -167,7 +167,6 @@ class CustomerProfilesListSerializer(serializers.ModelSerializer):
 
     def to_representation(self, instance):
         representation = super().to_representation(instance)
-        # Rename 'id' to 'pk' in the nested user representation
         user_representation = representation['user']
         user_representation['pk'] = user_representation.pop('id')
         return representation

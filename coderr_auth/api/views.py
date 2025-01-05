@@ -69,7 +69,6 @@ class ProfileDetailsAPIView(APIView):
         """
         profile = get_object_or_404(Profile, pk=pk)
 
-        # Check if the requesting user matches the profile's user
         if profile.user != request.user:
             raise PermissionDenied("Sie haben keine Berechtigung, dieses Profil zu ändern.")
 
@@ -78,15 +77,12 @@ class ProfileDetailsAPIView(APIView):
             'file', 'location', 'description', 'working_hours', 'tel'
         }
 
-        # Check for disallowed fields in the request
         disallowed_fields = [key for key in request.data.keys() if key not in allowed_fields]
         if disallowed_fields:
             return Response(
                 {"detail": f"Die Felder {', '.join(disallowed_fields)} können nicht aktualisiert werden. Nur die Felder {', '.join(allowed_fields)} dürfen aktualisiert werden."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
-        # Filter allowed fields from the request
         data = {key: value for key, value in request.data.items() if key in allowed_fields}
 
         if not data:
@@ -95,12 +91,9 @@ class ProfileDetailsAPIView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        # Pass data to the serializer
         serializer = ProfileSerializer(profile, data=data, partial=True)
         if serializer.is_valid():
             serializer.save()
-
-            # Always include the user details in the response
             response_data = {key: serializer.data[key] for key in data.keys()}
             response_data['user'] = pk
             return Response(response_data, status=status.HTTP_200_OK)
