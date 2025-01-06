@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'coderr_auth',
     'rest_framework.authtoken',
     'offers',
+    'orders',
 
 ]
 

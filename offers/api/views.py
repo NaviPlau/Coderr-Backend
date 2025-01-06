@@ -12,7 +12,7 @@ from rest_framework.filters import OrderingFilter, SearchFilter
 from django.db.models import Min
 from rest_framework.pagination import PageNumberPagination
 from offers.api.ordering import OrderingHelperOffers
-
+from django.utils.timezone import now
 class BusinessProfileRequired(APIException):
     status_code = 403
     default_detail = {"details": ["Nur Unternehmen können Angebote erstellen."]}
@@ -44,8 +44,16 @@ class OfferListAPIView(ListCreateAPIView):
         if max_delivery_time:
             queryset = queryset.filter(details__delivery_time_in_days__lte=max_delivery_time)
         odering = self.request.query_params.get('ordering', None)
+        if odering is None:
+            odering = 'updated_at'
         queryset = OrderingHelperOffers.apply_ordering(queryset, ordering=odering)
         return queryset
+    
+
+    def get_permissions(self):
+        if self.request.method == 'POST':
+            return [IsOwnerOrAdmin()] 
+        return super().get_permissions()
     
     def perform_create(self, serializer, format = None):
         user = self.request.user
@@ -59,16 +67,20 @@ class OfferListAPIView(ListCreateAPIView):
 class OfferDetailsAPIView(RetrieveUpdateDestroyAPIView):
     queryset = Offer.objects.prefetch_related('details')
     serializer_class = SingleFullOfferDetailSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly, IsOwnerOrAdmin]
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get_permissions(self):
+        if self.request.method == 'PATCH':
+            return [IsOwnerOrAdmin()] 
+        return super().get_permissions()
 
     def update(self, request, format=None, **kwargs):
       partial = kwargs.pop('partial', False)
       instance = self.get_object()
       serializer = self.get_serializer(instance, data=request.data, partial=partial)
       serializer.is_valid(raise_exception=True)
-      if 'image' in request.FILES:
-          instance.image = request.FILES['image'] 
       serializer.save()
+      instance.updated_at = now()
 
       updated_data = {
           'id': instance.id,

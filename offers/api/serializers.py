@@ -1,12 +1,15 @@
 from rest_framework import serializers
 from django.urls import reverse
 from offers.models import Offer, OfferDetail
-from django.db import models
+from django.db import models, transaction
 
 class OfferDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = OfferDetail
         fields = ['title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
+        extra_kwargs = {
+            'id': {'read_only': True}
+        }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -137,7 +140,6 @@ class OfferSerializer(serializers.ModelSerializer):
         }
     
     def create(self, validated_data):
-        
         validated_details = validated_data.pop('validated_details', [])
         offer = Offer.objects.create(**validated_data)
 
@@ -208,10 +210,21 @@ class SingleFullOfferDetailSerializer(serializers.ModelSerializer):
         return attrs
     
     def update(self, instance, validated_data):
-        validated_details = validated_data.pop('validated_details', [])
-        instance.details.all().delete()
-        for detail in validated_details:
-            OfferDetail.objects.create(offer=instance, **detail)
-
+        details_data = validated_data.pop('details', None)
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        if details_data is not None:
+            existing_details = {detail.id: detail for detail in instance.details.all()}
+            for detail_data in details_data:
+                if 'id' in detail_data and detail_data['id'] in existing_details:
+                    detail_instance = existing_details.pop(detail_data['id'])
+                    for attr, value in detail_data.items():
+                        setattr(detail_instance, attr, value)
+                    detail_instance.save()
+                else:
+                    OfferDetail.objects.create(offer=instance, **detail_data)
+            for remaining_detail in existing_details.values():
+                remaining_detail.delete()
+        instance.save()
         return instance
       

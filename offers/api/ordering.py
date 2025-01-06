@@ -28,8 +28,8 @@ class OrderingHelperOffers:
         "created_at": "created_at",
         "min_price": "min_price",
         "-min_price": "-min_price",
-        "-updated_at": "-updated_at",  
-        "updated_at": "updated_at",    
+        "-updated_at": "updated_at",  
+        "updated_at": "-updated_at",    
         }
-        ordering_field = ordering_map.get(ordering, "-created_at")  
+        ordering_field = ordering_map.get(ordering, "-updated_at")  
         return queryset.order_by(ordering_field)
