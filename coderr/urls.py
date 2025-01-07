@@ -22,6 +22,8 @@ urlpatterns = [
     path('api/' , include('coderr_auth.api.urls')),
     path('api/' , include('offers.api.urls')),
     path('api/' , include('orders.api.urls')),
+    path('api/' , include('reviews.api.urls')),
+    path('api/' , include('baseinfo.api.urls')),
 ]
 
 from django.conf import settings

@@ -3,16 +3,20 @@ from offers.api.permissions import IsOwnerOrAdmin
 from offers.models import Offer, OfferDetail
 from offers.api.serializers import SingleDetailOfOfferSerializer, SingleFullOfferDetailSerializer, OfferDetailSerializer
 from offers.api.serializers import OfferSerializer
-from rest_framework.permissions import IsAuthenticatedOrReadOnly, AllowAny
+from rest_framework.permissions import IsAuthenticatedOrReadOnly
 from rest_framework.exceptions import APIException
-from rest_framework.response import Response
-from rest_framework import status
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework.filters import OrderingFilter, SearchFilter
+from rest_framework.filters import  SearchFilter
 from django.db.models import Min
 from rest_framework.pagination import PageNumberPagination
 from offers.api.ordering import OrderingHelperOffers
 from django.utils.timezone import now
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
+from rest_framework import status
+
+
 class BusinessProfileRequired(APIException):
     status_code = 403
     default_detail = {"details": ["Nur Unternehmen können Angebote erstellen."]}
@@ -33,6 +37,18 @@ class OfferListAPIView(ListCreateAPIView):
     search_fields = ['title', 'description']
 
     def get_queryset(self):
+        """
+        Returns a filtered queryset of offers based on query parameters.
+
+        The queryset is filtered as follows:
+
+        - `creator_id`: filter by the user who created the offer
+        - `min_price`: filter by the minimum price of the offer
+        - `max_delivery_time`: filter by the maximum delivery time of the offer
+        - `ordering`: filter by the ordering of the offer (default is 'updated_at')
+
+        :return: a filtered queryset of offers
+        """
         queryset = Offer.objects.annotate(min_price=Min('details__price'))
         creator_id = self.request.query_params.get('creator_id', None)
         if creator_id:
@@ -51,11 +67,33 @@ class OfferListAPIView(ListCreateAPIView):
     
 
     def get_permissions(self):
+        """
+        Returns the list of permissions that this view requires.
+
+        If the request is a POST, it requires IsOwnerOrAdmin permission.
+        Otherwise, it returns the default permissions.
+
+        :return: a list of permissions required by this view
+        """
         if self.request.method == 'POST':
             return [IsOwnerOrAdmin()] 
         return super().get_permissions()
     
     def perform_create(self, serializer, format = None):
+        """
+        Checks if the user has a business profile before creating an offer.
+
+        This method is called when a new offer is being created. It ensures that
+        only users with a 'business' profile type are allowed to create offers.
+        If the user does not have a business profile, a
+        `BusinessProfileRequired` exception is raised. If the user has the
+        appropriate profile, the offer is saved with the current user set as the
+        creator.
+
+        :param serializer: The serializer instance containing the data to be saved.
+        :raises BusinessProfileRequired: If the user does not have a business profile.
+        """
+    
         user = self.request.user
         profile = getattr(user, 'profile', None)
 
@@ -70,6 +108,15 @@ class OfferDetailsAPIView(RetrieveUpdateDestroyAPIView):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_permissions(self):
+        """
+        Returns the list of permissions that this view requires.
+
+        If the request is a PATCH, it requires IsOwnerOrAdmin permission.
+        Otherwise, it returns the default permissions.
+
+        :return: a list of permissions required by this view
+        """
+
         if self.request.method == 'PATCH':
             return [IsOwnerOrAdmin()] 
         return super().get_permissions()
@@ -81,6 +128,7 @@ class OfferDetailsAPIView(RetrieveUpdateDestroyAPIView):
       serializer.is_valid(raise_exception=True)
       serializer.save()
       instance.updated_at = now()
+      instance.refresh_from_db()
 
       updated_data = {
           'id': instance.id,
@@ -96,7 +144,13 @@ class OfferDetailsAPIView(RetrieveUpdateDestroyAPIView):
 
 
 
-class OfferDetailDetailsAPIView(RetrieveUpdateDestroyAPIView):
-    queryset = OfferDetail.objects.all()
-    serializer_class = SingleDetailOfOfferSerializer
-    permission_classes = [AllowAny]
+class OfferDetailDetailsAPIView(APIView):
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+    def get(self, request, pk, format=None):
+        """
+        API View to get the details of an offer by its primary key (pk).
+        """
+        offer = get_object_or_404(OfferDetail, id=pk)
+        serializer = SingleDetailOfOfferSerializer(offer)
+        return Response(serializer.data, status=status.HTTP_200_OK)

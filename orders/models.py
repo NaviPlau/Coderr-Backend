@@ -1,7 +1,7 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.utils.timezone import now
-from django.contrib.auth.models import User  # Replace with your custom user model if applicable
+from django.contrib.auth.models import User 
 
 class Order(models.Model):
     STATUS_CHOICES = [
@@ -35,25 +35,27 @@ class Order(models.Model):
     offer_type = models.CharField(max_length=50, blank=True)
 
     def save(self, *args, **kwargs):
+        """
+        Saves the current instance. Overwrites the business_user with the user of the associated Offer if not set.
+        Copies the title, revisions, delivery_time_in_days, price and features from the associated OfferDetail if not set.
+        """
         if not self.business_user_id and self.offer_detail_id:
             self.business_user = self.offer_detail_id.offer.user
         if not self.title and self.offer_detail_id:
             self.title = self.offer_detail_id.title
         if self.offer_detail_id:
-            if self.revisions is None:
-                self.revisions = self.offer_detail_id.revisions
-            if self.delivery_time_in_days is None:
-                self.delivery_time_in_days = self.offer_detail_id.delivery_time_in_days
-            if self.price is None:
-                self.price = self.offer_detail_id.price
-            if self.features is None:
-                self.features = self.offer_detail_id.features
-            if not self.offer_type:
-                self.offer_type = self.offer_detail_id.offer_type
-
+            self.revisions = self.revisions or self.offer_detail_id.revisions
+            self.delivery_time_in_days = self.delivery_time_in_days or self.offer_detail_id.delivery_time_in_days
+            self.price = self.price or self.offer_detail_id.price
+            self.features = self.features or self.offer_detail_id.features
+            self.offer_type = self.offer_type or self.offer_detail_id.offer_type
         super().save(*args, **kwargs)
 
     def update(self, *args, **kwargs):
+        """
+        Updates the current instance. Updates the updated_at field with the current time.
+
+        """
         self.updated_at = now()
         super().save(*args, **kwargs)
 

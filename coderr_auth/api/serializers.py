@@ -20,7 +20,7 @@ class RegistrationSerializer(serializers.ModelSerializer):
     )
     username = serializers.CharField(
         required=True,
-        error_messages={"unique": "Benutzername oder Email bereits vorhanden."}
+        error_messages={"unique": ["Benutzername oder Email bereits vorhanden."]}
     )
     password = serializers.CharField(
         write_only=True,
@@ -47,11 +47,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
         """
         if User.objects.filter(username=data['username']).exists() or User.objects.filter(email=data['email']).exists():
             raise serializers.ValidationError(
-                {"detail": "Benutzername oder Email bereits vorhanden."}
+                {"detail": ["Benutzername oder Email bereits vorhanden."]}
             )
         if data['password'] != data['repeated_password']:
             raise serializers.ValidationError(
-                {"password": "Passwörter stimmen nicht überein."}
+                {"detail": ["Passwörter stimmen nicht überein."]}
             )
         return data
     
@@ -79,13 +79,13 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = '__all__'
         extra_kwargs = {
-            'email': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein." , 'required': "Dieses Feld ist erforderlich.", 'unique': "Email bereits vorhanden."}},
-            'first_name': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
-            'last_name': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
-            'location': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
-            'description': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
-            'working_hours': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
-            'tel': {'error_messages': {'blank': "Dieses Feld darf nicht leer sein."}},
+            'email': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."] , 'required': "Dieses Feld ist erforderlich.", 'unique': "Email bereits vorhanden."}},
+            'first_name': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
+            'last_name': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
+            'location': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
+            'description': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
+            'working_hours': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
+            'tel': {'error_messages': {'blank': ["Dieses Feld darf nicht leer sein."]}},
         }
 
     def validate(self, attrs):
@@ -100,7 +100,7 @@ class ProfileSerializer(serializers.ModelSerializer):
 
         if extra_fields:
             raise serializers.ValidationError(
-                {"detail": f"Die Felder {', '.join(extra_fields)} können nicht aktualisiert werden. Nur die Felder {', '.join(allowed_fields)} dürfen aktualisiert werden."}
+                {"detail": [f"Die Felder {', '.join(extra_fields)} können nicht aktualisiert werden. Nur die Felder {', '.join(allowed_fields)} dürfen aktualisiert werden."]}
             )
 
         return attrs
@@ -111,7 +111,6 @@ class ProfileSerializer(serializers.ModelSerializer):
         """
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
-
         instance.save()
         return instance
 
@@ -134,9 +133,9 @@ class LoginSerializer(serializers.Serializer):
         password = data.get("password")
         user = User.objects.filter(username=username).first()
         if not user:
-            raise serializers.ValidationError({"username": "User könnte nicht gefunden werden."})
+            raise serializers.ValidationError({"details": ["Falsche Username oder Passwort."]})
         if not user.check_password(password):
-            raise serializers.ValidationError({"password": "Falsche Username oder Passwort."})
+            raise serializers.ValidationError({"details": ["Falsche Username oder Passwort."]})
         token, created = Token.objects.get_or_create(user=user)
         data['user_id'] = user.id
         data['token'] = token.key
@@ -152,6 +151,14 @@ class BusinessProfilesListSerializer(serializers.ModelSerializer):
         fields = ['user', 'type', 'file', 'location', 'description', 'working_hours', 'tel']
 
     def to_representation(self, instance):
+        """
+        Customizes the representation of the serializer to include the user's first
+        and last name in the user field.
+
+        :param instance: The Profile instance to be serialized.
+        :return: A dictionary representation of the Profile instance,
+                 with the user field containing the user's first and last name.
+        """
         representation = super().to_representation(instance)
         user_representation = representation['user']
         user_representation['pk'] = user_representation.pop('id')
@@ -166,6 +173,14 @@ class CustomerProfilesListSerializer(serializers.ModelSerializer):
         fields = ['user', 'type', 'file', 'uploaded_at']
 
     def to_representation(self, instance):
+        """
+        Customizes the representation of the serializer to include the user's pk
+        instead of id in the user field.
+
+        :param instance: The Profile instance to be serialized.
+        :return: A dictionary representation of the Profile instance,
+                 with the user field containing the user's pk.
+        """
         representation = super().to_representation(instance)
         user_representation = representation['user']
         user_representation['pk'] = user_representation.pop('id')

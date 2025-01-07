@@ -64,41 +64,24 @@ class ProfileDetailsAPIView(APIView):
     
     def patch(self, request, pk, format=None):
         """
-        Partially updates a profile with the given primary key, allowing
-        updates only to specific fields, and ensuring the user profile is included in the response.
+        Updates allowed fields of a profile and includes the user in the response.
         """
         profile = get_object_or_404(Profile, pk=pk)
 
         if profile.user != request.user:
             raise PermissionDenied("Sie haben keine Berechtigung, dieses Profil zu ändern.")
 
-        allowed_fields = {
-            'email', 'first_name', 'last_name',
-            'file', 'location', 'description', 'working_hours', 'tel'
-        }
+        allowed_fields = {'email', 'first_name', 'last_name', 'file', 'location', 'description', 'working_hours', 'tel'}
+        invalid_fields = [key for key in request.data if key not in allowed_fields]
+        
+        if invalid_fields:
+            return Response({"detail": [f"Die Felder {', '.join(invalid_fields)} sind nicht erlaubt."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        disallowed_fields = [key for key in request.data.keys() if key not in allowed_fields]
-        if disallowed_fields:
-            return Response(
-                {"detail": f"Die Felder {', '.join(disallowed_fields)} können nicht aktualisiert werden. Nur die Felder {', '.join(allowed_fields)} dürfen aktualisiert werden."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
         data = {key: value for key, value in request.data.items() if key in allowed_fields}
-
-        if not data:
-            return Response(
-                {"detail": f"Es können nur die Felder {', '.join(allowed_fields)} aktualisiert werden."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         serializer = ProfileSerializer(profile, data=data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            response_data = {key: serializer.data[key] for key in data.keys()}
-            response_data['user'] = pk
-            return Response(response_data, status=status.HTTP_200_OK)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response({**{key: serializer.data[key] for key in data}, "user": pk}, status=status.HTTP_200_OK)
         
 
 class LoginView(APIView):
@@ -130,6 +113,7 @@ class LoginView(APIView):
 
 class ProfileListCustomers(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     def get(self, request):
         """
         Retrieves a list of customer profiles.
@@ -150,6 +134,7 @@ class ProfileListCustomers(APIView):
 
 class ProfileListBusiness(APIView):
     permission_classes = [IsAuthenticated]
+    pagination_class = None
     def get(self, request):
         """
         Retrieves a list of business profiles.
