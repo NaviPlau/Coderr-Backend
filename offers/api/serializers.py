@@ -6,7 +6,7 @@ from django.db import models
 class OfferDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = OfferDetail
-        fields = ['title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type']
+        fields = ['title', 'revisions', 'delivery_time_in_days', 'price', 'features', 'offer_type', 'id']
         extra_kwargs = {
             'id': {'read_only': True}
         }

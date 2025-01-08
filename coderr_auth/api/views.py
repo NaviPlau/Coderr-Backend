@@ -67,16 +67,12 @@ class ProfileDetailsAPIView(APIView):
         Updates allowed fields of a profile and includes the user in the response.
         """
         profile = get_object_or_404(Profile, pk=pk)
-
         if profile.user != request.user:
             raise PermissionDenied("Sie haben keine Berechtigung, dieses Profil zu ändern.")
-
         allowed_fields = {'email', 'first_name', 'last_name', 'file', 'location', 'description', 'working_hours', 'tel'}
         invalid_fields = [key for key in request.data if key not in allowed_fields]
-        
         if invalid_fields:
             return Response({"detail": [f"Die Felder {', '.join(invalid_fields)} sind nicht erlaubt."]}, status=status.HTTP_400_BAD_REQUEST)
-
         data = {key: value for key, value in request.data.items() if key in allowed_fields}
         serializer = ProfileSerializer(profile, data=data, partial=True)
         serializer.is_valid(raise_exception=True)

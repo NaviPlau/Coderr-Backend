@@ -15,6 +15,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework import status
+from rest_framework.exceptions import PermissionDenied
+
 
 
 class BusinessProfileRequired(APIException):
@@ -139,6 +141,15 @@ class OfferDetailsAPIView(RetrieveUpdateDestroyAPIView):
       }
 
       return Response(updated_data, status=status.HTTP_200_OK)
+    
+    def delete(self, request, pk, *args, **kwargs):
+        offer = get_object_or_404(Offer, id=pk)
+        if not (request.user == offer.user or request.user.is_staff):
+            raise PermissionDenied({"details": ["Nur der Besitzer oder ein Admin kann das Angebot löschen."], })
+        if not (request.user.profile.type == 'business' or request.user.is_staff):
+            raise PermissionDenied({"details" : ["Nur ein Unternehmen kann ein Angebot löschen."], })
+        offer.delete()
+        return Response({}, status=status.HTTP_200_OK)
     
 
 

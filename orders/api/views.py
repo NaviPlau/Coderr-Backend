@@ -3,14 +3,14 @@ from orders.models import Order
 from .serializers import OrdersListSerializer, OrdersPostSerializer, OrderPatchSerializer
 from rest_framework.response import Response
 from rest_framework import status
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.contrib.auth.models import User
 from django.db.models import Q
 
 
 class OrdersListAPIView(APIView):
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [IsAuthenticated]
     pagination_class = None
 
     def get(self, request, format=None):
@@ -41,6 +41,8 @@ class OrdersListAPIView(APIView):
                 if successful, or error details if the validation fails.
         """
         serializer = OrdersPostSerializer(data=request.data)
+        if self.request.user.profile.type is not 'customer':
+            return Response({'detail': ['Nur Kunden Können aufträge erteilen']}, status=status.HTTP_400_BAD_REQUEST)
         if serializer.is_valid():
             serializer.save(customer_user=request.user.id)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
