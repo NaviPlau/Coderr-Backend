@@ -52,7 +52,6 @@ INSTALLED_APPS = [
     'orders',
     'reviews',
     'baseinfo',
-
 ]
 
 MIDDLEWARE = [
