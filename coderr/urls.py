@@ -18,12 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('api/' , include('coderr_auth.api.urls')),
-    path('api/' , include('offers.api.urls')),
-    path('api/' , include('orders.api.urls')),
-    path('api/' , include('reviews.api.urls')),
-    path('api/' , include('baseinfo.api.urls')),
+    path('coderr/admin/', admin.site.urls),
+    path('coderr/api/' , include('coderr_auth.api.urls')),
+    path('coderr/api/' , include('offers.api.urls')),
+    path('coderr/api/' , include('orders.api.urls')),
+    path('coderr/api/' , include('reviews.api.urls')),
+    path('coderr/api/' , include('baseinfo.api.urls')),
 ]
 
 from django.conf import settings
